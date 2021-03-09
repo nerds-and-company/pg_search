@@ -126,15 +126,25 @@ $ rake db:migrate
 To add a model to the global search index for your application, call
 multisearchable in its class definition.
 
+You must also define a method in the class that returns the localized value of attributes according to your localization setup.
+
 ```ruby
 class EpicPoem < ActiveRecord::Base
   include PgSearch::Model
   multisearchable against: [:title, :author]
+
+  def searchable_content(attribute, _language)
+    send(attribute)
+  end
 end
 
 class Flower < ActiveRecord::Base
   include PgSearch::Model
   multisearchable against: :color
+
+  def searchable_content(attribute, _language)
+    send(attribute)
+  end
 end
 ```
 
@@ -245,6 +255,19 @@ PgSearch.multisearch(params['search']).where(author_id: 2)
 ```
 
 *NOTE: You must currently manually call `record.update_pg_search_document` for the additional attribute to be included in the pg_search_documents table*
+
+**Specify languages for search documents**
+
+You can specify `:languages` that you want the search documents to be saved in. It will save search documents against all the languages provided by the proc. The proc must return an array of string values. For example: 
+
+```ruby
+multisearchable(
+    against: [:body],
+    languages: :languages
+  )   
+```
+
+Defaults to `[I18n.default_locale]`.
 
 #### Multi-search associations
 
