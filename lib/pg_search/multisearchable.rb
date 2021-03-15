@@ -18,20 +18,20 @@ module PgSearch
       end
     end
 
-    def searchable_text(language)
+    def searchable_text(language: I18n.locale)
       Array(pg_search_multisearchable_options[:against])
         .map { |symbol| searchable_content(symbol, language) }
         .join(" ")
     end
 
     def search_languages
-      pg_search_multisearchable_options[:languages]&.to_proc&.call(self) || [I18n.default_locale]
+      pg_search_multisearchable_options[:languages]&.to_proc&.call(self) || I18n.available_locales
     end
 
     def pg_search_documents_attrs
       search_languages.map do |language|
         {
-          content: searchable_text(language),
+          content: searchable_text(language: language),
           language: language,
           sort_content: searchable_content(sort_content_attribute, language)
         }.tap do |h|
