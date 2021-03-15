@@ -267,7 +267,7 @@ multisearchable(
   )   
 ```
 
-Defaults to `[I18n.default_locale]`.
+Defaults to `I18n.available_locales`.
 
 #### Multi-search associations
 
