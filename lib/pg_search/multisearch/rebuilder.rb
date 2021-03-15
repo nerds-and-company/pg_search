@@ -14,7 +14,7 @@ module PgSearch
         if model.respond_to?(:rebuild_pg_search_documents)
           model.rebuild_pg_search_documents
         elsif conditional? || dynamic? || additional_attributes?
-          model.find_each(&:update_pg_search_document)
+          model.find_each(&:update_pg_search_documents)
         else
           model.connection.execute(rebuild_sql)
         end
@@ -47,9 +47,11 @@ module PgSearch
 
       def rebuild_sql_template
         <<~SQL.squish
-          INSERT INTO :documents_table (searchable_type, searchable_id, content, created_at, updated_at)
+          INSERT INTO :documents_table (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
             SELECT :base_model_name AS searchable_type,
                    :model_table.#{primary_key} AS searchable_id,
+                   ':language' AS language,
+                   :sort_content AS sort_content,
                    (
                      :content_expressions
                    ) AS content,
@@ -76,7 +78,16 @@ module PgSearch
       end
 
       def replacements
-        %w[content_expressions base_model_name model_name model_table documents_table current_time sti_clause]
+        %w[language sort_content content_expressions base_model_name model_name model_table documents_table
+           current_time sti_clause]
+      end
+
+      def language
+        I18n.locale.to_s
+      end
+
+      def sort_content
+        %{coalesce(:model_table.#{connection.quote_column_name(columns.first)}::text, '')}
       end
 
       def content_expressions

@@ -9,16 +9,18 @@ module PgSearch
         has_many :pg_search_documents,
                  as: :searchable,
                  class_name: "PgSearch::Document",
-                 dependent: :delete_all
+                 dependent: :destroy
 
         after_save :update_pg_search_documents,
                    if: -> { PgSearch.multisearch_enabled? }
+
+        after_destroy :clear_search_documents
       end
     end
 
     def searchable_text(language)
       Array(pg_search_multisearchable_options[:against])
-        .map { |symbol| searchable_content(symbol, language)}
+        .map { |symbol| searchable_content(symbol, language) }
         .join(" ")
     end
 
@@ -31,7 +33,7 @@ module PgSearch
         {
           content: searchable_text(language),
           language: language,
-          sort_content: searchable_content(get_sort_content_attribute, language)
+          sort_content: searchable_content(sort_content_attribute, language)
         }.tap do |h|
           if (attrs = pg_search_multisearchable_options[:additional_attributes])
             h.merge! attrs.to_proc.call(self)
@@ -47,7 +49,7 @@ module PgSearch
       conditions.all? { |condition| condition.to_proc.call(self) }
     end
 
-    def update_pg_search_documents # rubocop:disable Metrics/AbcSize
+    def update_pg_search_documents
       if_conditions = Array(pg_search_multisearchable_options[:if])
       unless_conditions = Array(pg_search_multisearchable_options[:unless])
 
@@ -58,7 +60,7 @@ module PgSearch
       if should_have_documents
         create_or_update_pg_search_documents
       else
-        pg_search_documents&.destroy
+        clear_search_documents
       end
     end
 
@@ -68,15 +70,17 @@ module PgSearch
         if attr[:content].blank?
           document.destroy
         else
-          document.content = attr[:content]
-          document.sort_content = attr[:sort_content]
-          document.save
+          document.update(attr) unless document.persisted? && !should_update_pg_search_documents?
         end
       end
     end
 
-    def get_sort_content_attribute
-      pg_search_multisearchable_options[:sortable] || pg_search_multisearchable_options[:against].first
+    def sort_content_attribute
+      pg_search_multisearchable_options[:sortable] || Array(pg_search_multisearchable_options[:against]).first
+    end
+
+    def clear_search_documents
+      pg_search_documents&.destroy_all
     end
   end
 end
