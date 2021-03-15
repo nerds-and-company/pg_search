@@ -254,7 +254,7 @@ This allows much faster searches without joins later on by doing something like:
 PgSearch.multisearch(params['search']).where(author_id: 2)
 ```
 
-*NOTE: You must currently manually call `record.update_pg_search_document` for the additional attribute to be included in the pg_search_documents table*
+*NOTE: You must currently manually call `record.update_pg_search_documents` for the additional attribute to be included in the pg_search_documents table*
 
 **Specify languages for search documents**
 
@@ -272,14 +272,16 @@ Defaults to `[I18n.default_locale]`.
 #### Multi-search associations
 
 Two associations are built automatically. On the original record, there is a
-has_one :pg_search_document association pointing to the PgSearch::Document
-record, and on the PgSearch::Document record there is a belongs_to :searchable
-polymorphic association pointing back to the original record.
+has_many :pg_search_documents association pointing to PgSearch::Document
+records, and on a PgSearch::Document record there is a belongs_to :searchable
+polymorphic association pointing back to the original record and a language attribute.
+
+A new PgSearch::Document record is created for every language.
 
 ```ruby
 odyssey = EpicPoem.create!(title: "Odyssey", author: "Homer")
-search_document = odyssey.pg_search_document #=> PgSearch::Document instance
-search_document.searchable #=> #<EpicPoem id: 1, title: "Odyssey", author: "Homer">
+search_documents = odyssey.pg_search_documents #=> [PgSearch::Document instance]
+search_documents.first.searchable #=> #<EpicPoem id: 1, title: "Odyssey", author: "Homer">
 ```
 
 #### Searching in the global search index
@@ -379,7 +381,7 @@ methods in :against, the following strategy will be used:
 
 ```ruby
 PgSearch::Document.delete_all(searchable_type: "Ingredient")
-Ingredient.find_each { |record| record.update_pg_search_document }
+Ingredient.find_each { |record| record.update_pg_search_documents }
 ```
 
 You can also provide a custom implementation for rebuilding the documents by
@@ -397,7 +399,7 @@ class Movie < ActiveRecord::Base
 
   # Naive approach
   def self.rebuild_pg_search_documents
-    find_each { |record| record.update_pg_search_document }
+    find_each { |record| record.update_pg_search_documents }
   end
 
   # More sophisticated approach
