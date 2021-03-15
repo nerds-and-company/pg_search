@@ -11,6 +11,8 @@ describe PgSearch::Multisearch do
     table do |t|
       t.string :title
       t.text :content
+      t.string :language
+      t.string :sort_content
       t.timestamps null: false
     end
     model do
@@ -37,13 +39,13 @@ describe PgSearch::Multisearch do
       before do
         connection.execute <<~SQL.squish
           INSERT INTO pg_search_documents
-            (searchable_type, searchable_id, content, created_at, updated_at)
+            (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
             VALUES
-            ('#{model.name}', 123, 'foo', now(), now());
+            ('#{model.name}', 123, 'en', 'foo', 'foo', now(), now());
           INSERT INTO pg_search_documents
-            (searchable_type, searchable_id, content, created_at, updated_at)
+            (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
             VALUES
-            ('Bar', 123, 'foo', now(), now());
+            ('Bar', 123, 'en', 'foo', 'foo', now(), now());
         SQL
         expect(PgSearch::Document.count).to eq(2)
       end
@@ -91,9 +93,9 @@ describe PgSearch::Multisearch do
           def model.rebuild_pg_search_documents
             connection.execute <<~SQL.squish
               INSERT INTO pg_search_documents
-                (searchable_type, searchable_id, content, created_at, updated_at)
+                (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
                 VALUES
-                ('Baz', 789, 'baz', now(), now());
+                ('Baz', 789, 'en', 'baz', 'baz', now(), now());
             SQL
           end
         end
@@ -137,9 +139,11 @@ describe PgSearch::Multisearch do
 
         it "generates the proper SQL code" do
           expected_sql = <<~SQL.squish
-            INSERT INTO #{PgSearch::Document.quoted_table_name} (searchable_type, searchable_id, content, created_at, updated_at)
+            INSERT INTO #{PgSearch::Document.quoted_table_name} (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
               SELECT #{connection.quote(model.name)} AS searchable_type,
                      #{model.quoted_table_name}.id AS searchable_id,
+                     '#{I18n.locale}' AS language,
+                     coalesce(#{model.quoted_table_name}."title"::text, '') AS sort_content,
                      (
                        coalesce(#{model.quoted_table_name}."title"::text, '')
                      ) AS content,
@@ -164,9 +168,11 @@ describe PgSearch::Multisearch do
 
         it "generates the proper SQL code" do
           expected_sql = <<~SQL.squish
-            INSERT INTO #{PgSearch::Document.quoted_table_name} (searchable_type, searchable_id, content, created_at, updated_at)
+            INSERT INTO #{PgSearch::Document.quoted_table_name} (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
               SELECT #{connection.quote(model.name)} AS searchable_type,
                      #{model.quoted_table_name}.id AS searchable_id,
+                     '#{I18n.locale}' AS language,
+                     coalesce(#{model.quoted_table_name}."title"::text, '') AS sort_content,
                      (
                        coalesce(#{model.quoted_table_name}."title"::text, '') || ' ' || coalesce(#{model.quoted_table_name}."content"::text, '')
                      ) AS content,

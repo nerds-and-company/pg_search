@@ -28,6 +28,10 @@ module PgSearch
       end
     end
 
+    def searchable_content(attribute, _language)
+      send(attribute)
+    end
+
     def method_missing(symbol, *args)
       case symbol
       when :pg_search_rank

@@ -1,5 +1,9 @@
 # pg_search changelog
 
+## 2.3.6
+
+* Sortable search documents per language. (Ammar Ghaus)
+
 ## 2.3.5
 
 * Add table of contents to README (Barry Woolgar)
