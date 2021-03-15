@@ -114,9 +114,11 @@ describe PgSearch::Multisearch::Rebuilder do
             rebuilder = described_class.new(Model, -> { time })
 
             expected_sql = <<~SQL.squish
-              INSERT INTO "pg_search_documents" (searchable_type, searchable_id, content, created_at, updated_at)
+              INSERT INTO "pg_search_documents" (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
                 SELECT 'Model' AS searchable_type,
                        #{Model.quoted_table_name}.#{Model.primary_key} AS searchable_id,
+                       '#{I18n.locale}' AS language,
+                       coalesce(#{Model.quoted_table_name}."name"::text, '') AS sort_content,
                        (
                          coalesce(#{Model.quoted_table_name}."name"::text, '')
                        ) AS content,
@@ -176,15 +178,17 @@ describe PgSearch::Multisearch::Rebuilder do
               rebuilder = described_class.new(ModelWithNonStandardPrimaryKey, -> { time })
 
               expected_sql = <<~SQL.squish
-                INSERT INTO "pg_search_documents" (searchable_type, searchable_id, content, created_at, updated_at)
-                  SELECT 'ModelWithNonStandardPrimaryKey' AS searchable_type,
-                         #{ModelWithNonStandardPrimaryKey.quoted_table_name}.non_standard_primary_key AS searchable_id,
-                         (
-                           coalesce(#{ModelWithNonStandardPrimaryKey.quoted_table_name}."name"::text, '')
-                         ) AS content,
-                         '2001-01-01 00:00:00' AS created_at,
-                         '2001-01-01 00:00:00' AS updated_at
-                  FROM #{ModelWithNonStandardPrimaryKey.quoted_table_name}
+                INSERT INTO "pg_search_documents" (searchable_type, searchable_id, language, sort_content, content, created_at, updated_at)
+                    SELECT 'ModelWithNonStandardPrimaryKey' AS searchable_type,
+                           #{ModelWithNonStandardPrimaryKey.quoted_table_name}.non_standard_primary_key AS searchable_id,
+                           '#{I18n.locale}' AS language,
+                           coalesce(#{ModelWithNonStandardPrimaryKey.quoted_table_name}."name"::text, '') AS sort_content,
+                           (
+                             coalesce(#{ModelWithNonStandardPrimaryKey.quoted_table_name}."name"::text, '')
+                           ) AS content,
+                           '2001-01-01 00:00:00' AS created_at,
+                           '2001-01-01 00:00:00' AS updated_at
+                    FROM #{ModelWithNonStandardPrimaryKey.quoted_table_name}
               SQL
 
               executed_sql = []
@@ -216,7 +220,7 @@ describe PgSearch::Multisearch::Rebuilder do
           end
 
           # rubocop:disable RSpec/ExampleLength
-          it "calls update_pg_search_document on each record" do
+          it "calls update_pg_search_documents on each record" do
             record = Model.create!
 
             rebuilder = described_class.new(Model)
@@ -239,7 +243,7 @@ describe PgSearch::Multisearch::Rebuilder do
               expect(Model).not_to have_received(:rebuild_pg_search_documents)
             end
 
-            expect(record.pg_search_document).to be_present
+            expect(record.pg_search_documents).to be_present
           end
           # rubocop:enable RSpec/ExampleLength
         end
@@ -257,7 +261,7 @@ describe PgSearch::Multisearch::Rebuilder do
             end
           end
 
-          it "calls update_pg_search_document on each record" do
+          it "calls update_pg_search_documents on each record" do
             record_1 = Model.create!(name: "record_1", id: 1)
             record_2 = Model.create!(name: "record_2", id: 2)
 
@@ -266,8 +270,8 @@ describe PgSearch::Multisearch::Rebuilder do
             rebuilder = described_class.new(Model)
             rebuilder.rebuild
 
-            expect(record_1.reload.pg_search_document.additional_attribute_column).to eq("Model::1")
-            expect(record_2.reload.pg_search_document.additional_attribute_column).to eq("Model::2")
+            expect(record_1.reload.pg_search_documents.first.additional_attribute_column).to eq("Model::1")
+            expect(record_2.reload.pg_search_documents.first.additional_attribute_column).to eq("Model::2")
           end
         end
       end
@@ -277,18 +281,19 @@ describe PgSearch::Multisearch::Rebuilder do
           with_model :Model do
             table do |t|
               t.boolean :active
+              t.string :name
             end
 
             model do
               include PgSearch::Model
-              multisearchable if: :active?
+              multisearchable if: :active?, against: :name
             end
           end
 
           # rubocop:disable RSpec/ExampleLength
-          it "calls update_pg_search_document on each record" do
-            record_1 = Model.create!(active: true)
-            record_2 = Model.create!(active: false)
+          it "calls update_pg_search_documents on each record" do
+            record_1 = Model.create!(name: 'record_1', active: true)
+            record_2 = Model.create!(name: 'record_2', active: false)
 
             rebuilder = described_class.new(Model)
 
@@ -308,8 +313,8 @@ describe PgSearch::Multisearch::Rebuilder do
               expect(Model).not_to have_received(:rebuild_pg_search_documents)
             end
 
-            expect(record_1.pg_search_document).to be_present
-            expect(record_2.pg_search_document).not_to be_present
+            expect(record_1.pg_search_documents).to be_present
+            expect(record_2.pg_search_documents).not_to be_present
           end
           # rubocop:enable RSpec/ExampleLength
         end
@@ -318,18 +323,19 @@ describe PgSearch::Multisearch::Rebuilder do
           with_model :Model do
             table do |t|
               t.boolean :inactive
+              t.string :name
             end
 
             model do
               include PgSearch::Model
-              multisearchable unless: :inactive?
+              multisearchable unless: :inactive?, against: :name
             end
           end
 
           # rubocop:disable RSpec/ExampleLength
-          it "calls update_pg_search_document on each record" do
-            record_1 = Model.create!(inactive: true)
-            record_2 = Model.create!(inactive: false)
+          it "calls update_pg_search_documents on each record" do
+            record_1 = Model.create!(name: 'record_1', inactive: true)
+            record_2 = Model.create!(name: 'record_1', inactive: false)
 
             rebuilder = described_class.new(Model)
 
@@ -349,8 +355,8 @@ describe PgSearch::Multisearch::Rebuilder do
               expect(Model).not_to have_received(:rebuild_pg_search_documents)
             end
 
-            expect(record_1.pg_search_document).not_to be_present
-            expect(record_2.pg_search_document).to be_present
+            expect(record_1.pg_search_documents).not_to be_present
+            expect(record_2.pg_search_documents).to be_present
           end
           # rubocop:enable RSpec/ExampleLength
         end

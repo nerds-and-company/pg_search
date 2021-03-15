@@ -30,6 +30,8 @@ require 'support/with_model'
 DOCUMENTS_SCHEMA = lambda do |t|
   t.belongs_to :searchable, polymorphic: true, index: true
   t.text :content
+  t.string :language, null: false
+  t.string :sort_content, null: false
   t.timestamps null: false
 
   # Used to test additional_attributes setup

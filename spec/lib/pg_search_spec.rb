@@ -134,14 +134,14 @@ describe PgSearch do
 
           results = described_class.multisearch("foo bar")
 
-          expect(results).to eq [included.pg_search_document]
+          expect(results).to eq included.pg_search_documents
         end
 
         it "updates an existing STI model does not create a new pg_search document" do
           model = SearchableSubclassModel.create!(content: "foo bar")
           expect(SearchableSubclassModel.count).to eq(1)
           # We fetch the model from the database again otherwise
-          # the pg_search_document from the cache is used.
+          # the pg_search_documents from the cache is used.
           model = SearchableSubclassModel.find(model.id)
           model.content = "foo"
           model.save!
@@ -226,7 +226,7 @@ describe PgSearch do
 
           results = described_class.multisearch("foo bar")
 
-          expect(results).to eq [included.pg_search_document]
+          expect(results).to eq included.pg_search_documents
         end
       end
     end
