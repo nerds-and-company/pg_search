@@ -4,7 +4,7 @@ class CreatePgSearchDocuments < ActiveRecord::Migration<%= migration_version %>
       create_table :pg_search_documents do |t|
         t.text :content
         t.string :language, null: false
-        t.string :sort_content, null: false
+        t.string :sort_content
         t.belongs_to :searchable, polymorphic: true, index: true
         t.timestamps null: false
       end
