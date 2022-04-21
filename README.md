@@ -1,10 +1,7 @@
 # [pg_search](http://github.com/Casecommons/pg_search/)
 
 [![Gem Version](https://img.shields.io/gem/v/pg_search.svg?style=flat)](https://rubygems.org/gems/pg_search)
-[![Build Status](https://secure.travis-ci.org/Casecommons/pg_search.svg?branch=master)](https://travis-ci.org/Casecommons/pg_search)
-[![Maintainability](https://api.codeclimate.com/v1/badges/ae1a7c021e473e9b2486/maintainability)](https://codeclimate.com/github/Casecommons/pg_search/maintainability)
-[![Test Coverage](https://codeclimate.com/github/Casecommons/pg_search/badges/coverage.svg)](https://codeclimate.com/github/Casecommons/pg_search/coverage)
-[![Inline docs](http://inch-ci.org/github/Casecommons/pg_search.svg?branch=master&style=flat)](http://inch-ci.org/github/Casecommons/pg_search)
+[![Build Status](https://github.com/Casecommons/pg_search/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Casecommons/pg_search/actions/workflows/ci.yml)
 [![Join the chat at https://gitter.im/Casecommons/pg_search](https://img.shields.io/badge/gitter-join%20chat-blue.svg)](https://gitter.im/Casecommons/pg_search?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## DESCRIPTION
@@ -16,7 +13,7 @@ Read the blog post introducing PgSearch at https://tanzu.vmware.com/content/blog
 
 ## REQUIREMENTS
 
-*   Ruby 2.5+
+*   Ruby 2.6+
 *   ActiveRecord 5.2+
 *   PostgreSQL 9.2+
 *   [PostgreSQL extensions](https://github.com/Casecommons/pg_search/wiki/Installing-PostgreSQL-Extensions) for certain features
@@ -363,6 +360,13 @@ like so:
 PgSearch::Multisearch.rebuild(Product, clean_up: false)
 ```
 
+```rebuild``` runs inside a single transaction. To run outside of a transaction,
+you can pass ```transactional: false``` like so:
+
+```ruby
+PgSearch::Multisearch.rebuild(Product, transactional: false)
+```
+
 Rebuild is also available as a Rake task, for convenience.
 
     $ rake pg_search:multisearch:rebuild[BlogPost]
@@ -408,7 +412,7 @@ class Movie < ActiveRecord::Base
      INSERT INTO pg_search_documents (searchable_type, searchable_id, content, created_at, updated_at)
        SELECT 'Movie' AS searchable_type,
               movies.id AS searchable_id,
-              (movies.name || ' ' || directors.name) AS content,
+              CONCAT_WS(' ', movies.name, directors.name) AS content,
               now() AS created_at,
               now() AS updated_at
        FROM movies
@@ -418,6 +422,7 @@ class Movie < ActiveRecord::Base
   end
 end
 ```
+**Note:** If using PostgreSQL before 9.1, replace the `CONCAT_WS()` function call with double-pipe concatenation, eg. `(movies.name || ' ' || directors.name)`. However, now be aware that if *any* of the joined values is NULL then the final `content` value will also be NULL, whereas `CONCAT_WS()` will selectively ignore NULL values.
 
 #### Disabling multi-search indexing temporarily
 
@@ -567,6 +572,21 @@ search techniques.
 class Beer < ActiveRecord::Base
   include PgSearch::Model
   pg_search_scope :search_name, against: :name, using: [:tsearch, :trigram, :dmetaphone]
+end
+```
+
+Here's an example if you pass multiple :using options with additional configurations.
+
+```ruby
+class Beer < ActiveRecord::Base
+  include PgSearch::Model
+  pg_search_scope :search_name, 
+  against: :name, 
+  using: {
+      :trigram => {},
+      :dmetaphone => {},
+      :tsearch => { :prefix => true }
+  }
 end
 ```
 
@@ -1221,5 +1241,5 @@ for discussing pg_search and other Casebook PBC open source projects.
 
 ## LICENSE
 
-Copyright © 2010–2021 [Casebook PBC](http://www.casebook.net).
+Copyright © 2010–2022 [Casebook PBC](http://www.casebook.net).
 Licensed under the MIT license, see [LICENSE](/LICENSE) file.

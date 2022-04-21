@@ -140,6 +140,22 @@ describe "an Active Record model which includes PgSearch" do
             }.to raise_error(ArgumentError, /against/)
           end
         end
+
+        context "when a tsvector column is specified" do
+          it "does not raise an exception when invoked" do
+            ModelWithPgSearch.pg_search_scope :with_unknown_ignoring, {
+              using: {
+                tsearch: {
+                  tsvector_column: "tsv"
+                }
+              }
+            }
+
+            expect {
+              ModelWithPgSearch.with_unknown_ignoring("foo")
+            }.not_to raise_error
+          end
+        end
       end
     end
   end
@@ -160,7 +176,7 @@ describe "an Active Record model which includes PgSearch" do
           expect(results).to include(included)
           expect(results).not_to include(excluded)
 
-          expect(results.first.attributes.key?('content')).to eq false
+          expect(results.first.attributes.key?('content')).to be false
 
           expect(results.select { |record| record.title == "bar" }).to eq [included]
           expect(results.reject { |record| record.title == "bar" }).to be_empty
@@ -177,7 +193,7 @@ describe "an Active Record model which includes PgSearch" do
           expect(results).to include(included)
           expect(results).not_to include(excluded)
 
-          expect(results.first.attributes.key?('content')).to eq false
+          expect(results.first.attributes.key?('content')).to be false
 
           expect(results.select { |record| record.title == "bar" }).to eq [included]
           expect(results.reject { |record| record.title == "bar" }).to be_empty
@@ -194,7 +210,7 @@ describe "an Active Record model which includes PgSearch" do
           expect(results).to include(included)
           expect(results).not_to include(excluded)
 
-          expect(results.first.attributes.key?('content')).to eq false
+          expect(results.first.attributes.key?('content')).to be false
 
           expect(results.select { |record| record.title == "bar" }).to eq [included]
           expect(results.reject { |record| record.title == "bar" }).to be_empty
@@ -407,6 +423,15 @@ describe "an Active Record model which includes PgSearch" do
         expect(results).to eq([winner, loser])
       end
 
+      it 'preserves column selection when with_pg_search_rank is chained after a select()' do
+        loser = ModelWithPgSearch.create!(title: 'foo', content: 'bar')
+
+        results = ModelWithPgSearch.search_content('bar').select(:content).with_pg_search_rank
+
+        expect(results.length).to be 1
+        expect(results.first.as_json.keys).to contain_exactly('id', 'content', 'pg_search_rank')
+      end
+
       it 'allows pg_search_rank along with a join' do
         parent_1 = ParentModel.create!(id: 98)
         parent_2 = ParentModel.create!(id: 99)
@@ -614,7 +639,7 @@ describe "an Active Record model which includes PgSearch" do
       describe "highlighting" do
         before do
           ["Strip Down", "Down", "Down and Out", "Won't Let You Down"].each do |name|
-            ModelWithPgSearch.create! content: name
+            ModelWithPgSearch.create! title: 'Just a title', content: name
           end
         end
 
@@ -634,6 +659,12 @@ describe "an Active Record model which includes PgSearch" do
             result = ModelWithPgSearch.search_content("Let").with_pg_search_highlight.first
 
             expect(result.pg_search_highlight).to eq("Won't <b>Let</b> You Down")
+          end
+
+          it 'preserves column selection when with_pg_search_highlight is chained after a select()' do
+            result = ModelWithPgSearch.search_content("Let").select(:content).with_pg_search_highlight.first
+
+            expect(result.as_json.keys).to contain_exactly('id', 'content', 'pg_search_highlight')
           end
         end
 

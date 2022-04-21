@@ -1,8 +1,17 @@
 # pg_search changelog
 
-## 2.3.6
+## 2.3.6.nerds
 
 * Sortable search documents per language. (Ammar Ghaus)
+
+## 2.3.6
+
+* Drop support for Ruby 2.5
+* Support Ruby 3.1
+* Support Active Record 7.0
+* Don't require `:against` if `:tsvector_column` is specified (Travis Hunter)
+* Optionally disable transaction when rebuilding documents (Travis Hunter)
+* Preserve columns when chaining ::with_pg_search_highlight (jcsanti)
 
 ## 2.3.5
 

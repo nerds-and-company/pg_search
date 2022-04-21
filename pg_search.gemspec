@@ -13,9 +13,10 @@ Gem::Specification.new do |s| # rubocop:disable Metrics/BlockLength
   s.summary     = "PgSearch builds Active Record named scopes that take advantage of PostgreSQL's full text search"
   s.description = "PgSearch builds Active Record named scopes that take advantage of PostgreSQL's full text search"
   s.licenses    = ['MIT']
+  s.metadata["rubygems_mfa_required"] = "true"
 
-  s.files         = `git ls-files`.split("\n")
-  s.test_files    = `git ls-files -- spec/*`.split("\n")
+  s.files         = `git ls-files -z`.split("\x0")
+  s.test_files    = `git ls-files -z -- spec/*`.split("\x0")
   s.require_paths = ['lib']
 
   s.add_dependency 'activerecord', '>= 5.2'
@@ -30,8 +31,10 @@ Gem::Specification.new do |s| # rubocop:disable Metrics/BlockLength
   s.add_development_dependency 'rubocop-rake'
   s.add_development_dependency 'rubocop-rspec'
   s.add_development_dependency 'simplecov'
+  s.add_development_dependency 'simplecov-lcov'
+  s.add_development_dependency 'undercover'
   s.add_development_dependency 'warning'
   s.add_development_dependency 'with_model'
 
-  s.required_ruby_version = '>= 2.5'
+  s.required_ruby_version = '>= 2.6'
 end
