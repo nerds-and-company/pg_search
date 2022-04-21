@@ -4,7 +4,7 @@ $LOAD_PATH.push File.expand_path('lib', __dir__)
 require 'pg_search/version'
 
 Gem::Specification.new do |s| # rubocop:disable Metrics/BlockLength
-  s.name        = 'pg_search'
+  s.name        = 'nerds-pg_search'
   s.version     = PgSearch::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ['Grant Hutchins', 'Case Commons, LLC']
@@ -13,7 +13,12 @@ Gem::Specification.new do |s| # rubocop:disable Metrics/BlockLength
   s.summary     = "PgSearch builds Active Record named scopes that take advantage of PostgreSQL's full text search"
   s.description = "PgSearch builds Active Record named scopes that take advantage of PostgreSQL's full text search"
   s.licenses    = ['MIT']
-  s.metadata["rubygems_mfa_required"] = "true"
+
+  # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
+  # to allow pushing to a single host or delete this section to allow pushing to any host.
+  # s.metadata["rubygems_mfa_required"] = "true"
+  s.metadata['allowed_push_host'] = 'https://rubygems.pkg.github.com/nerds-and-company'
+  s.metadata['github_repo'] = 'ssh://github.com/nerds-and-company/pg_search'
 
   s.files         = `git ls-files -z`.split("\x0")
   s.test_files    = `git ls-files -z -- spec/*`.split("\x0")
